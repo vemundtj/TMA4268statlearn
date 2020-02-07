@@ -375,9 +375,20 @@ summary {
 <p>For this problem you will need to include some LaTex code. Please install latex on your computer and then consult Compulsor1.Rmd for hints how to write formulas in LaTex.</p>
 <div id="a" class="section level2">
 <h2>a)</h2>
+<p>The expression for the test mean squared error is <span class="math display">\[\begin{equation}
+\text{MSE}_{\text{test}}=\frac{1}{n_0}\sum_{j=1}^{n_0} (y_{0j}-\hat{f}(x_{0j}))^2
+\end{equation}\]</span></p>
+<p>The expected test mean squared error (MSE) at <span class="math inline">\(x_0\)</span> is defined as:</p>
+<p><span class="math display">\[\begin{equation}
+\text{E}[y_0 - \hat{f}(x_0)]^2
+\end{equation}\]</span></p>
 </div>
 <div id="b" class="section level2">
 <h2>b)</h2>
+<p>Using the fact that <span class="math inline">\(y_0=f(x_0)+\varepsilon\)</span> gives</p>
+<p><span class="math display">\[\begin{equation}
+\text{E}[y_0 - \hat{f}(x_0)]^2 =  \underbrace{\text{Var}(\varepsilon)}_{\text{Irreducible error}} + \underbrace{\text{Var}(\hat{f}(x_0))}_{\text{Variance of prediction}} + \underbrace{\left( f(x_0) - \text{E}[\hat{f}(x_0)] \right)^2}_{\text{Squared bias}}
+\end{equation}\]</span></p>
 </div>
 <div id="c" class="section level2">
 <h2>c)</h2>

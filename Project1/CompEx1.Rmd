@@ -36,7 +36,24 @@ For this problem you will need to include some LaTex code. Please install latex 
 
 ## a) 
 
+The expression for the test mean squared error is
+\begin{equation}
+\text{MSE}_{\text{test}}=\frac{1}{n_0}\sum_{j=1}^{n_0} (y_{0j}-\hat{f}(x_{0j}))^2
+\end{equation}
+
+The expected test mean squared error (MSE) at $x_0$ is defined as: 
+
+\begin{equation}
+\text{E}[y_0 - \hat{f}(x_0)]^2
+\end{equation}
+
 ## b)
+
+Using the fact that $y_0=f(x_0)+\varepsilon$ gives
+
+\begin{equation}
+\text{E}[y_0 - \hat{f}(x_0)]^2 =  \underbrace{\text{Var}(\varepsilon)}_{\text{Irreducible error}} + \underbrace{\text{Var}(\hat{f}(x_0))}_{\text{Variance of prediction}} + \underbrace{\left( f(x_0) - \text{E}[\hat{f}(x_0)] \right)^2}_{\text{Squared bias}}
+\end{equation}
 
 ## c)
 
