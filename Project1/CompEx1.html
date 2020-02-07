@@ -446,14 +446,120 @@ head(d.worm)</code></pre>
 </div>
 <div id="problem-3" class="section level1">
 <h1>Problem 3</h1>
+<p>Loading the files:</p>
+<pre class="r"><code>id &lt;- &quot;1GNbIhjdhuwPOBr0Qz82JMkdjUVBuSoZd&quot;
+tennis &lt;- read.csv(sprintf(&quot;https://docs.google.com/uc?id=%s&amp;export=download&quot;, id), 
+    header = T)
+head(tennis)</code></pre>
+<pre><code>##         Player1      Player2 Result ACE.1 UFE.1 ACE.2 UFE.2
+## 1     M.Koehler   V.Azarenka      0     2    18     3    14
+## 2    E.Baltacha   F.Pennetta      0     0    10     4    14
+## 3     S-W.Hsieh      T.Maria      1     1    13     2    29
+## 4      A.Cornet       V.King      1     4    30     0    45
+## 5  Y.Putintseva   K.Flipkens      0     2    28     6    19
+## 6 A.Tomljanovic B.Jovanovski      0     6    42    11    40</code></pre>
 <div id="a-2" class="section level2">
 <h2>a)</h2>
+<p>We have <span class="math display">\[\begin{equation}
+\label{eq:p_i}
+p_i = \frac{e^{\beta_0 + \beta_1x_{i1} + \beta_2 x_{i2} + \beta_3x_{i3} + \beta_4 x_{i4}}}{ 1+ e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}} 
+\end{equation}\]</span></p>
+<p>which gives</p>
+<p><span class="math display">\[\begin{equation}
+\label{eq:logit}
+  \text{logit}(p_i) = \log\left(\frac{p_i}{1-p_i}\right)= \log\left(\frac{\frac{e^{\beta_0 + \beta_1x_{i1} + \beta_2 x_{i2} + \beta_3x_{i3} + \beta_4 x_{i4}}}{ 1+ e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}}}{1-\frac{e^{\beta_0 + \beta_1x_{i1} + \beta_2 x_{i2} + \beta_3x_{i3} + \beta_4 x_{i4}}}{ 1+ e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}}}\right)
+\end{equation}\]</span></p>
+<p>Multiplying both the numerator and denominator in Equation  by <span class="math inline">\(1+ e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}\)</span> gives</p>
+<p><span class="math display">\[\begin{equation}
+  \text{logit}(p_i) = \log\left( \frac{e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}}{1 + e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}} - (e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}})} \right)
+\end{equation}\]</span></p>
+<p>which further results in</p>
+<p><span class="math display">\[\begin{equation}
+\label{eq:linear}
+  \text{logit}(p_i) = \log(e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}) = \beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}
+\end{equation}\]</span></p>
+<p>It can be seen from Equation  that <span class="math inline">\(\text{logit}(p_i)\)</span> is a linear function of the covariates <span class="math inline">\(x_{i1}\)</span>, <span class="math inline">\(x_{i2}\)</span>, <span class="math inline">\(x_{i3}\)</span> and <span class="math inline">\(x_{i4}\)</span>.</p>
 </div>
 <div id="b-2" class="section level2">
 <h2>b)</h2>
+<pre class="r"><code>r.tennis = glm(Result ~ ACE.1 + ACE.2 + UFE.1 + UFE.2, data = tennis, family = &quot;binomial&quot;)
+summary(r.tennis)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = Result ~ ACE.1 + ACE.2 + UFE.1 + UFE.2, family = &quot;binomial&quot;, 
+##     data = tennis)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -2.0517  -0.8454   0.3725   0.8773   2.0959  
+## 
+## Coefficients:
+##             Estimate Std. Error z value Pr(&gt;|z|)    
+## (Intercept) -0.02438    0.59302  -0.041 0.967211    
+## ACE.1        0.36338    0.10136   3.585 0.000337 ***
+## ACE.2       -0.22388    0.07369  -3.038 0.002381 ** 
+## UFE.1       -0.09847    0.02840  -3.467 0.000527 ***
+## UFE.2        0.09010    0.02479   3.635 0.000278 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 163.04  on 117  degrees of freedom
+## Residual deviance: 124.96  on 113  degrees of freedom
+## AIC: 134.96
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
+<pre class="r"><code>coeffs = coef(r.tennis)
+eterm1 = exp(coeffs[1] + coeffs[2] + coeffs[3] + coeffs[4] + coeffs[5])
+p1 = eterm1/(1 + eterm1)
+eterm2 = exp(coeffs[1] + 2 * coeffs[2] + coeffs[3] + coeffs[4] + coeffs[5])
+p2 = eterm2/(1 + eterm2)
+rat = p2/p1</code></pre>
+<p>Since the <span class="math inline">\(\beta_1\)</span> is positive one more ace for player one would increase the probability of player 1 winning. It also makes sense that an ace for player 1 would increase the probability of player 1 winning. The propability increase is dependent on the other parameters as well, but assuming 1 ace and 1 unforced error for each player, one more ace for player 1 would increase the probability of player 1 winning by a ratio of 1.1685197.</p>
 </div>
 <div id="c-2" class="section level2">
 <h2>c)</h2>
+<pre class="r"><code># make variables for difference
+tennis$ACEdiff = tennis$ACE.1 - tennis$ACE.2
+tennis$UFEdiff = tennis$UFE.1 - tennis$UFE.2
+
+# divide into test and train set
+n = dim(tennis)[1]
+n2 = n/2
+set.seed(1234)  # to reproduce the same test and train sets each time you run the code
+train = sample(c(1:n), replace = F)[1:n2]
+tennisTest = tennis[-train, ]
+tennisTrain = tennis[train, ]
+
+# Fitting a logistic regression model on the form Result ~ ACEdiff + UFEdiff on
+# the traininng set
+fit.3c = glm(Result ~ ACEdiff + UFEdiff, data = tennis, family = &quot;binomial&quot;)
+summary(fit.3c)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = Result ~ ACEdiff + UFEdiff, family = &quot;binomial&quot;, 
+##     data = tennis)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -2.1923  -0.8922   0.3821   0.9089   2.1254  
+## 
+## Coefficients:
+##             Estimate Std. Error z value Pr(&gt;|z|)    
+## (Intercept)  0.21576    0.21833   0.988    0.323    
+## ACEdiff      0.27273    0.06251   4.363 1.28e-05 ***
+## UFEdiff     -0.09101    0.02285  -3.983 6.80e-05 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 163.04  on 117  degrees of freedom
+## Residual deviance: 126.48  on 115  degrees of freedom
+## AIC: 132.48
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
 </div>
 <div id="d-2" class="section level2">
 <h2>d)</h2>

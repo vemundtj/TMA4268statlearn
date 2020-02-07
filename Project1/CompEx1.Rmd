@@ -102,11 +102,80 @@ Note that the default figure width and height have been set globally as `fig.wid
 
 # Problem 3
 
+Loading the files:
+```{r, echo=TRUE, eval=TRUE}
+id <- "1GNbIhjdhuwPOBr0Qz82JMkdjUVBuSoZd"
+tennis <- read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", 
+    id), header = T)
+head(tennis)
+```
+
 ## a)
+We have
+\begin{equation}
+\label{eq:p_i}
+p_i = \frac{e^{\beta_0 + \beta_1x_{i1} + \beta_2 x_{i2} + \beta_3x_{i3} + \beta_4 x_{i4}}}{ 1+ e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}} 
+\end{equation}
+
+which gives
+
+\begin{equation}
+\label{eq:logit}
+  \text{logit}(p_i) = \log\left(\frac{p_i}{1-p_i}\right)= \log\left(\frac{\frac{e^{\beta_0 + \beta_1x_{i1} + \beta_2 x_{i2} + \beta_3x_{i3} + \beta_4 x_{i4}}}{ 1+ e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}}}{1-\frac{e^{\beta_0 + \beta_1x_{i1} + \beta_2 x_{i2} + \beta_3x_{i3} + \beta_4 x_{i4}}}{ 1+ e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}}}\right)
+\end{equation}
+
+Multiplying both the numerator and denominator in Equation \ref{eq:logit} by $1+ e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}$ gives 
+
+\begin{equation}
+  \text{logit}(p_i) = \log\left( \frac{e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}}{1 + e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}} - (e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}})} \right)
+\end{equation}
+
+which further results in 
+
+\begin{equation}
+\label{eq:linear}
+  \text{logit}(p_i) = \log(e^{\beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}}) = \beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ \beta_3x_{i3} + \beta_4 x_{i4}
+\end{equation}
+
+It can be seen from Equation \ref{eq:linear} that $\text{logit}(p_i)$ is a linear function of the covariates $x_{i1}$, $x_{i2}$, $x_{i3}$ and $x_{i4}$.
 
 ## b)
 
+```{r, echo=FALSE, eval=TRUE}
+r.tennis = glm(Result ~ ACE.1 + ACE.2 + UFE.1 + UFE.2, data = tennis, family = "binomial")
+summary(r.tennis)
+coeffs = coef(r.tennis)
+eterm1 = exp(coeffs[1] + coeffs[2] + coeffs[3] + coeffs[4] + coeffs[5])
+p1 = eterm1/(1 + eterm1)
+eterm2 = exp(coeffs[1] + 2* coeffs[2] + coeffs[3] + coeffs[4] + coeffs[5])
+p2 = eterm2/(1 + eterm2)
+rat = p2/p1
+```
+
+
+Since the $\beta_1$ is positive one more ace for player one would increase the probability of player 1 winning. It also makes sense that an ace for player 1 would increase the probability of player 1 winning. The propability increase is dependent on the other parameters as well, but assuming 1 ace and 1 unforced error for each player, one more ace for player 1 would increase the probability of player 1 winning by a ratio of `r rat`.
+
 ## c)
+
+```{r, echo=TRUE, eval=TRUE}
+# make variables for difference
+tennis$ACEdiff = tennis$ACE.1 - tennis$ACE.2
+tennis$UFEdiff = tennis$UFE.1 - tennis$UFE.2
+
+# divide into test and train set
+n = dim(tennis)[1]
+n2 = n/2
+set.seed(1234)  # to reproduce the same test and train sets each time you run the code
+train = sample(c(1:n), replace = F)[1:n2]
+tennisTest = tennis[-train, ]
+tennisTrain = tennis[train, ]
+
+# Fitting a logistic regression model on the form Result ∼ ACEdiff + UFEdiff on the traininng set
+fit.3c = glm(Result ~ ACEdiff + UFEdiff, data = tennis, family = "binomial")
+summary(fit.3c)
+```
+
+
 
 ## d)
 
