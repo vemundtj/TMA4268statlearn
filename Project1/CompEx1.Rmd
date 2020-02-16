@@ -4,8 +4,8 @@ title: "Compulsory exercise 1: Group 13"
 author: "Erik Andrè Klepp Vik and Vemund Tjessem"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
-  html_document
-  #pdf_document
+  #html_document
+  pdf_document
 ---
   
 ```{r setup, include=FALSE}
@@ -144,16 +144,9 @@ It can be seen from Equation \ref{eq:linear} that $\text{logit}(p_i)$ is a linea
 ```{r, echo=FALSE, eval=TRUE}
 r.tennis = glm(Result ~ ACE.1 + ACE.2 + UFE.1 + UFE.2, data = tennis, family = "binomial")
 summary(r.tennis)
-coeffs = coef(r.tennis)
-eterm1 = exp(coeffs[1] + coeffs[2] + coeffs[3] + coeffs[4] + coeffs[5])
-p1 = eterm1/(1 + eterm1)
-eterm2 = exp(coeffs[1] + 2* coeffs[2] + coeffs[3] + coeffs[4] + coeffs[5])
-p2 = eterm2/(1 + eterm2)
-rat = p2/p1
 ```
 
-
-Since the $\beta_1$ is positive one more ace for player one would increase the probability of player 1 winning. It also makes sense that an ace for player 1 would increase the probability of player 1 winning. The propability increase is dependent on the other parameters as well, but assuming 1 ace and 1 unforced error for each player, one more ace for player 1 would increase the probability of player 1 winning by a ratio of `r rat`.
+Since the $\beta_1$ is positive one more ace for player one would increase the probability of player 1 winning. By incerasing $x_i$ by 1 the odds ratio for $Y_i=1$ increases by $\exp(\beta_1)$.
 
 ## c)
 
@@ -169,21 +162,157 @@ set.seed(1234)  # to reproduce the same test and train sets each time you run th
 train = sample(c(1:n), replace = F)[1:n2]
 tennisTest = tennis[-train, ]
 tennisTrain = tennis[train, ]
+```
 
-# Fitting a logistic regression model on the form Result ∼ ACEdiff + UFEdiff on the traininng set
-fit.3c = glm(Result ~ ACEdiff + UFEdiff, data = tennis, family = "binomial")
+The code for fitting a logistic regression model is given below. 
+
+```{r tennisTrain, echo=TRUE, eval=TRUE}
+# Fitting a logistic regression model on the form Result ∼ ACEdiff + UFEdiff on the training set
+fit.3c = glm(Result ~ ACEdiff + UFEdiff, data = tennisTrain, family = "binomial")
 summary(fit.3c)
 ```
 
+The class boundary will be where $\hat P(Y=1|\boldsymbol{x}) =0.5$. When the probability is 0.5 we have $\text{logit}(p_i)=\log(1)=0$
+
+\begin{equation}
+  0 = \beta_0 + \beta_1 x_{1} + \beta_2 x_{2}
+\end{equation}
+
+This gives the class boundary
+
+\begin{equation}
+  x_{2} = - \frac{\beta_0}{\beta2} - \frac{\beta_1}{\beta_2}x_{1}
+\end{equation}
+
+
+
+```{r, eval=TRUE, echo=TRUE, fig.width=6,fig.height=4,fig.align="center"}
+cof = coef(fit.3c)
+a = - cof[1]/cof[3]
+b = -cof[2]/cof[3]
+```
+The class boundary will be $x_2 = `r round(a, 3)` + `r round(b, 3)`x_1$
+
+Making a plot of the training observations and the class boundary.
+```{r , eval=TRUE, echo=TRUE, fig.width=6,fig.height=4,fig.align="center"}
+df = data.frame(tennisTrain, "Player1won"=as.factor(tennisTrain$Result))
+ggplot(df, aes(x = ACEdiff, y = UFEdiff, color = Player1won)) + geom_abline(intercept=a, slope=b) + geom_point(size=1) + theme_bw()
+```
+
+Making a confusion matrix
+
+```{r, echo=TRUE, eval=TRUE}
+prd = predict(fit.3c, tennisTest, type="response")
+confMat = table(tennisTest$Result, prd>0.5)
+confMat
+```
+
+The sensitivity is `r confMat[2,2]/(confMat[2,1] + confMat[2,2])` and the specificity is `r round(confMat[1,1]/(confMat[1,1] + confMat[1,2]), 3)`
 
 
 ## d)
 
+* $\pi_k$ is the prior class probabilities $\pi_k=\text{Pr}(Y=k)$. In this case it will be the probability for player 1 winning and for player 1 losing. 
+
+* $\boldsymbol\mu_k$ is the mean of class $k$. In this case it will be a vector with the mean of difference in aces and difference in unforced errors. 
+
+* $\boldsymbol \Sigma$ is the covariance matrix, and in this case it is assumed equal for both classes. The diagonal elements will be the variance of the difference in aces the variance of the difference in unforced errors and the off-diagonal elements will be the covariance.
+
+* $f_k(\boldsymbol x)$ is the probability distribution of class $k$, and is assumed to be multivariate normally distributed with mean $\boldsymbol \mu_k$ and covariance $\boldsymbol \Sigma$.
+
 ## e)
+
+### Part 1
+
+\begin{equation}
+P(Y=0 | {\bf X}={\boldsymbol x}) = P(Y=1 | {\bf X}={\boldsymbol x})
+\end{equation}
+
+The first step is to insert for the probability and the probability distribution.
+
+\begin{equation}
+\frac{\pi_0}{\sum_{l=1}^K \pi_l f_l({\boldsymbol x})2 \pi|\boldsymbol{\Sigma}|^{1/2}}e^{-\frac{1}{2}({\boldsymbol x}-\boldsymbol{\mu_0})^T \boldsymbol{\Sigma}^{-1}({\boldsymbol x}-\boldsymbol{\mu_0})} = \frac{\pi_1}{\sum_{l=1}^K \pi_l f_l({\boldsymbol x})2 \pi|\boldsymbol{\Sigma}|^{1/2}}e^{-\frac{1}{2}({\boldsymbol x}-\boldsymbol{\mu_1})^T \boldsymbol{\Sigma}^{-1}({\boldsymbol x}-\boldsymbol{\mu_1})}
+\end{equation}
+
+Next is taking the logarithm on both sides, which gives
+
+\begin{align}
+&\log(\pi_0)-\frac{1}{2}\boldsymbol x^T \boldsymbol \Sigma^{-1} \boldsymbol x + \boldsymbol x^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_0 + \boldsymbol \mu_0^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_0 - \log\left(\sum_{l=1}^K \pi_l f_l({\boldsymbol x})2 \pi|\boldsymbol{\Sigma}|^{1/2}\right) = \\ &\log(\pi_1)-\frac{1}{2}\boldsymbol x^T \boldsymbol \Sigma^{-1} \boldsymbol x + \boldsymbol x^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_1 + \boldsymbol \mu_1^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_1 - \log\left(\sum_{l=1}^K \pi_l f_l({\boldsymbol x})2 \pi|\boldsymbol{\Sigma}|^{1/2}\right)
+\end{align}
+
+After removing the terms not depending on $k$, which are equal on both sides
+
+\begin{equation}
+\label{eq:deltalikdelta}
+\log(\pi_0) + \boldsymbol x^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_0 + \frac{1}{2} \boldsymbol \mu_0^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_0 = \log(\pi_1) + \boldsymbol x^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_1 + \frac{1}{2} \boldsymbol \mu_1^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_1
+\end{equation}
+
+which equals
+
+\begin{equation}
+\delta_0({\boldsymbol x}) = \delta_1({\boldsymbol x})
+\end{equation}
+
+### Part 2
+
+The class boundary will be the values for $\boldsymbol x$ where $\delta_0({\boldsymbol x}) = \delta_1({\boldsymbol x})$, hence Equation \ref{eq:deltalikdelta} can be used to find the class boundary.
+
+
+\begin{equation}
+\boldsymbol x^T \boldsymbol \Sigma^{-1} \boldsymbol (\mu_0 - \mu_1) = \log\left(\frac{\pi_1}{\pi_0}\right) + \frac{1}{2} \boldsymbol \mu_1^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_1 - \frac{1}{2} \boldsymbol \mu_0^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_0
+\end{equation}
+
+Doing the matrix multiplications here will result in a equation on the form $ax_1 + bx_2=c$, which can be used to find the class boundary on the form $x_2 = \frac{c}{b} - \frac{a}{b}x_1$.
+
+```{r, eval=TRUE, echo=TRUE, fig.width=6,fig.height=4,fig.align="center"}
+k0s = subset(tennisTrain, tennisTrain$Result < 0.5)
+k1s = subset(tennisTrain, tennisTrain$Result > 0.5)
+n0 = length(k0s$UFEdiff)
+n1 = length(k1s$UFEdiff)
+pi0 = n0/(n0 + n1)
+pi1 = n1/(n0 + n1)
+mu0 = matrix(c(mean(k0s$ACEdiff), mean(k0s$UFEdiff)), nrow = 2)
+mu1 = matrix(c(mean(k1s$ACEdiff), mean(k1s$UFEdiff)), nrow = 2)
+covmat0 = cov(cbind(k0s$ACEdiff, k0s$UFEdiff))
+covmat1 = cov(cbind(k1s$ACEdiff, k1s$UFEdiff))
+covK = 1/(n0 + n1)*((n0-1) * covmat0 + (n1 - 1) * covmat1)
+c = log(pi1/pi0) + 0.5 * t(mu1)%*%solve(covK)%*%mu1 - 0.5 * t(mu0)%*%solve(covK)%*%mu0
+lhs = solve(covK)%*%(mu0-mu1)
+a = lhs[1]
+b = lhs[2]
+```
+
+Find that $a=`r round(a, 3)`$, $b=`r round(b,3)`$ and $c=`r round(c, 3)`$, which gives the class boundary $x_2 = `r round(c/b, 3)` + `r -round(a/b,3)` x_1$
+
+### Part 3
+```{r, eval=TRUE, echo=TRUE, fig.width=6,fig.height=4,fig.align="center"}
+tennis$istrain = 1
+tennis[-train, ]$istrain = 0
+df2 = data.frame(tennis, "Player1won"=as.factor(tennis$Result), "Istrain"=as.factor(tennis$istrain))
+ggplot(df2, aes(x = ACEdiff, y = UFEdiff, color = Player1won, shape = Istrain)) + geom_abline(intercept=c/b, slope=-a/b) + geom_point(size=2) + theme_bw()
+```
 
 ## f)
 
+```{r, echo=TRUE, eval=TRUE}
+lda.fit = lda(Result ~ ACEdiff + UFEdiff, data = tennisTrain)
+lda.fit.p = predict(lda.fit, tennisTest)$class
+confMat = table(lda.fit.p, tennisTest$Result)
+confMat
+```
+
+The sensitivity is `r round(confMat[2,2]/(confMat[2,1] + confMat[2,2]), 3)` and the specificity is `r round(confMat[1,1]/(confMat[1,1] + confMat[1,2]), 3)`
+
 ## g)
+
+```{r, echo=TRUE, eval=TRUE}
+qda.fit = qda(Result ~ ACEdiff + UFEdiff, data = tennisTrain)
+qda.fit.p = predict(qda.fit, tennisTest)$class
+confMat = table(qda.fit.p, tennisTest$Result)
+confMat
+```
+
+The sensitivity is `r round(confMat[2,2]/(confMat[2,1] + confMat[2,2]), 3)` and the specificity is `r round(confMat[1,1]/(confMat[1,1] + confMat[1,2]), 3)`
 
 ## h)
 
@@ -195,6 +324,14 @@ summary(fit.3c)
 ## b)
 
 ## c)
+
+
+```{r, eval=TRUE, echo=TRUE}
+id <- "1I6dk1fA4ujBjZPo3Xj8pIfnzIa94WKcy" # google file ID
+d.chd <- read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id))
+fit.4c = glm(chd ~ sbp + sex, data = d.chd, family = "binomial")
+summary(fit.4c)
+```
 
 ## d)
 
