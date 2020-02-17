@@ -482,6 +482,8 @@ p_i = \frac{e^{\beta_0 + \beta_1x_{i1} + \beta_2 x_{i2} + \beta_3x_{i3} + \beta_
 </div>
 <div id="b-2" class="section level2">
 <h2>b)</h2>
+<pre class="r"><code>r.tennis = glm(Result ~ ACE.1 + ACE.2 + UFE.1 + UFE.2, data = tennis, family = &quot;binomial&quot;)
+summary(r.tennis)</code></pre>
 <pre><code>## 
 ## Call:
 ## glm(formula = Result ~ ACE.1 + ACE.2 + UFE.1 + UFE.2, family = &quot;binomial&quot;, 
@@ -617,9 +619,16 @@ P(Y=0 | {\bf X}={\boldsymbol x}) = P(Y=1 | {\bf X}={\boldsymbol x})
 <h3>Part 2</h3>
 <p>The class boundary will be the values for <span class="math inline">\(\boldsymbol x\)</span> where <span class="math inline">\(\delta_0({\boldsymbol x}) = \delta_1({\boldsymbol x})\)</span>, hence Equation  can be used to find the class boundary.</p>
 <p><span class="math display">\[\begin{equation}
-\boldsymbol x^T \boldsymbol \Sigma^{-1} \boldsymbol (\mu_0 - \mu_1) = \log\left(\frac{\pi_1}{\pi_0}\right) + \frac{1}{2} \boldsymbol \mu_1^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_1 - \frac{1}{2} \boldsymbol \mu_0^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_0
+\boldsymbol x^T \boldsymbol \Sigma^{-1}  (\boldsymbol\mu_0 - \boldsymbol\mu_1) = \log\left(\frac{\pi_1}{\pi_0}\right) + \frac{1}{2} \boldsymbol \mu_1^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_1 - \frac{1}{2} \boldsymbol \mu_0^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_0
 \end{equation}\]</span></p>
 <p>Doing the matrix multiplications here will result in a equation on the form <span class="math inline">\(ax_1 + bx_2=c\)</span>, which can be used to find the class boundary on the form <span class="math inline">\(x_2 = \frac{c}{b} - \frac{a}{b}x_1\)</span>.</p>
+<p>Since <span class="math inline">\(\pi_k\)</span>, <span class="math inline">\(\boldsymbol \mu_k\)</span> and <span class="math inline">\(\boldsymbol \Sigma\)</span> are unknown, they have to be estimated. The estimators used are</p>
+<ul>
+<li><span class="math inline">\(\hat{\pi}_k = \frac{n_k}{n}\)</span></li>
+<li><span class="math inline">\(\hat{\boldsymbol{\mu}}_k = \frac{1}{n_k}\sum_{i:y_i=k} {\bf X}_i\)</span></li>
+<li><span class="math inline">\(\hat{\boldsymbol{\Sigma}}_k=\frac{1}{n_k-1}\sum_{i:y_i=k} ({\bf X}_i-\hat{\boldsymbol{\mu}}_k ) ({\bf X}_i-\hat{\boldsymbol{\mu}}_k)^T\)</span></li>
+<li><span class="math inline">\(\hat{\boldsymbol{\Sigma}}= \sum_{k=1}^K \frac{n_k - 1}{n - K} \cdot \hat{\boldsymbol{\Sigma}}_k\)</span></li>
+</ul>
 <pre class="r"><code>k0s = subset(tennisTrain, tennisTrain$Result &lt; 0.5)
 k1s = subset(tennisTrain, tennisTrain$Result &gt; 0.5)
 n0 = length(k0s$UFEdiff)

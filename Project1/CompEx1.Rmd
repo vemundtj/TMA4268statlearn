@@ -4,8 +4,8 @@ title: "Compulsory exercise 1: Group 13"
 author: "Erik Andrè Klepp Vik and Vemund Tjessem"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
-  #html_document
-  pdf_document
+  html_document
+  #pdf_document
 ---
   
 ```{r setup, include=FALSE}
@@ -141,7 +141,7 @@ It can be seen from Equation \ref{eq:linear} that $\text{logit}(p_i)$ is a linea
 
 ## b)
 
-```{r, echo=FALSE, eval=TRUE}
+```{r, echo=TRUE, eval=TRUE}
 r.tennis = glm(Result ~ ACE.1 + ACE.2 + UFE.1 + UFE.2, data = tennis, family = "binomial")
 summary(r.tennis)
 ```
@@ -259,10 +259,17 @@ The class boundary will be the values for $\boldsymbol x$ where $\delta_0({\bold
 
 
 \begin{equation}
-\boldsymbol x^T \boldsymbol \Sigma^{-1} \boldsymbol (\mu_0 - \mu_1) = \log\left(\frac{\pi_1}{\pi_0}\right) + \frac{1}{2} \boldsymbol \mu_1^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_1 - \frac{1}{2} \boldsymbol \mu_0^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_0
+\boldsymbol x^T \boldsymbol \Sigma^{-1}  (\boldsymbol\mu_0 - \boldsymbol\mu_1) = \log\left(\frac{\pi_1}{\pi_0}\right) + \frac{1}{2} \boldsymbol \mu_1^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_1 - \frac{1}{2} \boldsymbol \mu_0^T \boldsymbol \Sigma^{-1} \boldsymbol \mu_0
 \end{equation}
 
 Doing the matrix multiplications here will result in a equation on the form $ax_1 + bx_2=c$, which can be used to find the class boundary on the form $x_2 = \frac{c}{b} - \frac{a}{b}x_1$.
+
+Since $\pi_k$, $\boldsymbol \mu_k$ and $\boldsymbol \Sigma$ are unknown, they have to be estimated. The estimators used are 
+
+* $\hat{\pi}_k = \frac{n_k}{n}$
+* $\hat{\boldsymbol{\mu}}_k = \frac{1}{n_k}\sum_{i:y_i=k} {\bf X}_i$
+* $\hat{\boldsymbol{\Sigma}}_k=\frac{1}{n_k-1}\sum_{i:y_i=k} ({\bf X}_i-\hat{\boldsymbol{\mu}}_k ) ({\bf X}_i-\hat{\boldsymbol{\mu}}_k)^T$
+* $\hat{\boldsymbol{\Sigma}}= \sum_{k=1}^K \frac{n_k - 1}{n - K} \cdot \hat{\boldsymbol{\Sigma}}_k$
 
 ```{r, eval=TRUE, echo=TRUE, fig.width=6,fig.height=4,fig.align="center"}
 k0s = subset(tennisTrain, tennisTrain$Result < 0.5)
@@ -320,6 +327,8 @@ The sensitivity is `r round(confMat[2,2]/(confMat[2,1] + confMat[2,2]), 3)` and 
 # Problem 4
 
 ## a)
+
+
 
 ## b)
 
