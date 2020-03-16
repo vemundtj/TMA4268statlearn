@@ -4,8 +4,8 @@ title: "Compulsory exercise 1: Group 13"
 author: "Erik Andrè Klepp Vik and Vemund Tjessem"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
-  html_document
-  #pdf_document
+  #html_document
+  pdf_document
 ---
   
 ```{r setup, include=FALSE}
@@ -32,7 +32,7 @@ library(dplyr)
 
 # Problem 1
 
-For this problem you will need to include some LaTex code. Please install latex on your computer and then consult Compulsor1.Rmd for hints how to write formulas in LaTex.
+For this problem you will need to include some LaTex code. Please install latex on your computer and then consult Compulsor1.Rmd for hints how to write formulas in LaTex. $\LaTeX$
 
 ## a) 
 
@@ -216,9 +216,9 @@ The sensitivity is `r confMat[2,2]/(confMat[2,1] + confMat[2,2])` and the specif
 
 * $\boldsymbol\mu_k$ is the mean of class $k$. In this case it will be a vector with the mean of difference in aces and difference in unforced errors. 
 
-* $\boldsymbol \Sigma$ is the covariance matrix, and in this case it is assumed equal for both classes. The diagonal elements will be the variance of the difference in aces the variance of the difference in unforced errors and the off-diagonal elements will be the covariance.
+* $\boldsymbol \Sigma$ is the covariance matrix, and in this case it is assumed equal for both classes since LDA is used. The diagonal elements will be the variance of the difference in aces the variance of the difference in unforced errors and the off-diagonal elements will be the covariance.
 
-* $f_k(\boldsymbol x)$ is the probability distribution of class $k$, and is assumed to be multivariate normally distributed with mean $\boldsymbol \mu_k$ and covariance $\boldsymbol \Sigma$.
+* $f_k(\boldsymbol x)$ is the probability density function for $\boldsymbol X$ in class $k$, and is here assumed to be multivariate normally distributed with mean $\boldsymbol \mu_k$ and covariance $\boldsymbol \Sigma$.
 
 ## e)
 
@@ -280,6 +280,8 @@ pi0 = n0/(n0 + n1)
 pi1 = n1/(n0 + n1)
 mu0 = matrix(c(mean(k0s$ACEdiff), mean(k0s$UFEdiff)), nrow = 2)
 mu1 = matrix(c(mean(k1s$ACEdiff), mean(k1s$UFEdiff)), nrow = 2)
+mu0
+mu1
 covmat0 = cov(cbind(k0s$ACEdiff, k0s$UFEdiff))
 covmat1 = cov(cbind(k1s$ACEdiff, k1s$UFEdiff))
 covK = 1/(n0 + n1)*((n0-1) * covmat0 + (n1 - 1) * covmat1)
@@ -296,7 +298,7 @@ Find that $a=`r round(a, 3)`$, $b=`r round(b,3)`$ and $c=`r round(c, 3)`$, which
 tennis$istrain = 1
 tennis[-train, ]$istrain = 0
 df2 = data.frame(tennis, "Player1won"=as.factor(tennis$Result), "Istrain"=as.factor(tennis$istrain))
-ggplot(df2, aes(x = ACEdiff, y = UFEdiff, color = Player1won, shape = Istrain)) + geom_abline(intercept=c/b, slope=-a/b) + geom_point(size=2) + theme_bw()
+ggplot(df2, aes(x = ACEdiff, y = UFEdiff, color = Player1won, shape = Istrain)) + geom_abline(intercept=c/b, slope=-a/b) + geom_point(size=1) + theme_bw()
 ```
 
 ## f)
@@ -309,7 +311,7 @@ confMat
 ```
 
 The sensitivity is `r round(confMat[2,2]/(confMat[2,1] + confMat[2,2]), 3)` and the specificity is `r round(confMat[1,1]/(confMat[1,1] + confMat[1,2]), 3)`
-
+  
 ## g)
 
 ```{r, echo=TRUE, eval=TRUE}
@@ -323,14 +325,41 @@ The sensitivity is `r round(confMat[2,2]/(confMat[2,1] + confMat[2,2]), 3)` and 
 
 ## h)
 
+Looking at the confusion matrices, QDA has the lowest sensitivity and the specificity is lower than for LDA, so QDA should not be used. Looking at the plot of the QDA decision boundary we see that to the left in the plot around `UFEdiff`=0 and below QDA classifies as win while glm and LDA would classify as loss, this may be why QDA is worse than the other two. glm has the highest sensitivity and the lowest specificity while LDA has better sensitivity than QDA and the best spesificity. Summing up the two values glm has the highest value, so that is what should be used.
+
 
 # Problem 4
 
 ## a)
 
+Given a set of values for $K$, 10-fold cross validation is performed by first randomly dividing the data into a training set and a testing set, the testing set is not used until the very end. The training dataset is then randomly divided into 10 more or less equal parts, $C_1$, $C_2$, ..., $C_{10}$. $C_k$ denotes the indices of the observations in part $k$. 9 parts are used for training the model and 1 is used for testing the model. This is done 10 times with a new set used as test set each time. The error is then calculated using the loss function in Equation \ref{eq:10foldCV}.
 
+\begin{equation}
+\label{eq:10foldCV}
+\text{CV}_{10} = \sum_{k=1}^{10} \frac{n_k}{10} \text{Err}_k
+\end{equation}
+
+where $n_k$ is the number of observations in part $k$. The error for part $k$ is
+
+\begin{equation}
+\text{Err}_k  = \sum_{i\in C_k} \frac{\text{I}(y_i\neq \hat y_i)}{n_k}
+\end{equation}
+
+where $\text{I}$ is the indicator function defined as 
+
+\begin{equation}
+\text{I}(a\neq\hat{a}) = \begin{cases} 1 \text{ if } a \neq \hat{a} \\ 
+0 \text{ else } \end{cases}
+\end{equation}
+
+This is done for each value of $K$ we want to consider. This will result in a plot of  $\text{CV}_{10}$ against $K$. Based on this plot the best model can be selected. the best model will typically be the one with the lowest $\text{CV}_{10}$. The model is then fit using the whole training dataset, and tested using the test set which has not been used yet. 
 
 ## b)
+
+(i) True
+(ii) True
+(iii) False
+(iv) False
 
 ## c)
 
@@ -340,9 +369,52 @@ id <- "1I6dk1fA4ujBjZPo3Xj8pIfnzIa94WKcy" # google file ID
 d.chd <- read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id))
 fit.4c = glm(chd ~ sbp + sex, data = d.chd, family = "binomial")
 summary(fit.4c)
+eta <- summary(fit.4c)$coef[, 1] %*% c(1, 140, 1)
+pchd = exp(eta)/(1 + exp(eta))
 ```
 
+The probability of a male with $sbp=140$ having coronary heart disease is `r round(pchd, 3)`.
+
+```{r, eval=FALSE, echo=FALSE, fig.width=6,fig.height=4,fig.align="center"}
+ggplot(d.chd, aes(x = sbp, y = sex, color=as.factor(chd))) + geom_point(size=1) + theme_bw()
+```
+
+
 ## d)
+
+Will now perform bootstrapping with $B=1000$. For each iteration the model is fit with the resampled data and is used to create a bootstrap estimate of the probability for `chd`, given `sbp`=140 and `sex`=male, $p$. The bootstrap estimates, $\hat{p}_i$, are stored in the `estimator` variable. 
+
+```{r, eval=TRUE, echo=TRUE, fig.width=6,fig.height=4,fig.align="center", cache=TRUE}
+B = 1000
+n = dim(d.chd)[1]
+estimator = rep(NA, B)
+for (b in 1:B) {
+  newind = sample(x = c(1:n), size = n, replace = TRUE)
+  newsample = d.chd[newind,1:3]
+  fit.4d = glm(chd ~ sbp + sex, data = newsample, family = "binomial")
+  eterm <- summary(fit.4d)$coef[, 1] %*% c(1, 140, 1)
+  estimator[b] = exp(eterm)/(1 + exp(eterm))
+}
+Mxb = mean(estimator)
+SE = sqrt(1/(B-1) * sum((estimator-Mxb)^2))
+confinterval = quantile(estimator, probs = c(2.5, 97.5)/100)
+```
+
+Now that there are $1000$ different values for the probability the standard error can be calculated. The mean is simply
+
+\begin{equation}
+\bar{\hat{p}} = \frac{1}{B}\sum_{i=1}^B \hat{p}_{i}
+\end{equation}
+
+The standard error is then
+
+\begin{equation}
+\text{SE}_B(\hat{p}) = \sqrt{\frac{1}{B-1}\sum_{i=1}^B (\hat{p}_{i}-\bar{\hat{p}})^2} = `r SE`
+\end{equation}
+
+
+The standard error is `r round(SE, 4)`. The confidence interval for $\hat p$ is (`r round(confinterval, 3)`)
+
 
 
 
