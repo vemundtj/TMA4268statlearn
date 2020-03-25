@@ -4,8 +4,8 @@ title: "Compulsory exercise 1: Group 13"
 author: "Vemund Tjessem, Erik Andre Klepp Vik"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
-  #html_document
-  pdf_document
+  html_document
+  #pdf_document
 ---
   
 ```{r setup, include=FALSE}

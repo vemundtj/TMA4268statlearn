@@ -27,7 +27,405 @@ library(ggplot2)
 library(ggfortify)
 library(MASS)
 library(dplyr)
+library(ISLR)
+library(leaps)
+library(glmnet)
+library(tree)
+library(randomForest)
+library(e1071)
 ```
 
 
 # Problem 1
+
+## a)
+
+The ridge regression coefficients $\beta_{Ridge}$ are the ones that minimize
+
+\begin{equation}
+  RSS + \lambda \sum_{j=1}^p \beta_j^2
+\end{equation}
+
+with $\lambda>0$ being a tuning parameter. From before we know that
+
+\begin{equation}
+  RSS = \sum_{i=1}^n \left(y_i - \hat\beta_0 - \sum_{j=1}^p \hat\beta_j x_{ij} \right)^2
+\end{equation}
+
+This can be written in terms of matrices and vectors as
+
+
+\begin{equation}
+  (y- X\hat \beta_{Ridge} )^{\top}(y- X\hat \beta_{Ridge} ) + \lambda \hat \beta_{Ridge}^{\top}\hat\beta_{Ridge}
+\end{equation}
+
+
+Differentiating this with respect to $\hat \beta_{Ridge}$ and setting equal to 0 gives
+
+\begin{subequations}
+\begin{align}
+  -2X^{\top}(y- X \hat \beta_{Ridge}) + 2\lambda \hat \beta_{Ridge}=0 \\
+  X^{\top}X \hat\beta_{Ridge} + \lambda\hat \beta_{Ridge} = X^{\top}y \\
+  \hat \beta_{Ridge} = (X^{\top}X + \lambda I)^{-1}X^{\top}y
+\end{align}
+\end{subequations}
+
+Where $I$ is the identity matrix. Even though $I$ is an identity matrix the first element would have to be 0 in order to not penalize the intercept $\beta_0$ with the ridge regression. Maybe this type of matrix has a name?
+
+## b)
+
+Already know that the expectation value of $y=X\beta + \epsilon$ is $\operatorname{E}[y] = X\beta$, as $\operatorname{E}[\epsilon]=0$. The expectation value of $\beta_{Ridge}$ is then
+
+\begin{subequations}
+\begin{align}
+  \operatorname{E}[\hat\beta_{Ridge}] &= (X^{\top}X + \lambda I)^{-1}X^{\top} \operatorname{E}[y] \\
+   &= (X^{\top}X + \lambda I)^{-1}X^{\top} X\beta
+\end{align}
+\end{subequations}
+
+This is a biased estimator as long as $\lambda\neq0$.
+
+The variance covariance matrix of $y$ is $\operatorname{Var}[y] = \operatorname{Var}[X\beta] + \operatorname{Var}[\epsilon]=\sigma^2$.
+
+\begin{subequations}
+\begin{align}
+  \operatorname{Var}[\hat\beta_{Ridge}] &= \operatorname{Var}[(X^{\top}X + \lambda I)^{-1}X^{\top}y]\\
+  &= (X^{\top}X + \lambda I)^{-1}X^{\top} \operatorname{Var}[y] [(X^{\top}X + \lambda I)^{-1}X^{\top}]^{\top}\\
+  &= \sigma^2 (X^{\top}X + \lambda I)^{-1}X^{\top} X [(X^{\top}X + \lambda I)^{-1}]^{\top}
+\end{align}
+\end{subequations}
+
+## c)
+
+(i) True
+(ii) False
+(iii) False
+(iv) True
+
+## d)
+
+Forward selection will be performed with `Outstate` as response using the `regsubsets` function. 
+
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=6,fig.align="center"}
+set.seed(1)
+train.ind = sample(1:nrow(College), 0.5 * nrow(College))
+college.train = College[train.ind, ]
+college.test = College[-train.ind, ]
+n_predictors = dim(College)[2]-1
+fwd.fit = regsubsets(Outstate~., college.train, nvmax = n_predictors, method = "forward")
+fwd.fit.summary = summary(fwd.fit)
+par(mfrow=c(2,2))
+plot(fwd.fit.summary$rss,xlab="Number of Variables",ylab="RSS",type=)
+plot(fwd.fit.summary$adjr2,xlab="Number of Variables",ylab="Adjusted RSq")
+fwd_best_adjr2 = which.max(fwd.fit.summary$adjr2)
+points(fwd_best_adjr2,fwd.fit.summary$adjr2[fwd_best_adjr2], col="red",cex=1,pch=20)
+plot(fwd.fit.summary$cp,xlab="Number of Variables",ylab="Cp")
+fwd_best_cp=which.min(fwd.fit.summary$cp)
+points(fwd_best_cp,fwd.fit.summary$cp[fwd_best_cp],col="r ed",cex=1,pch=20)
+fwd_best_bic=which.min(fwd.fit.summary$bic)
+plot(fwd.fit.summary$bic,xlab="Number of Variables",ylab="BIC")
+points(fwd_best_bic,fwd.fit.summary$bic[fwd_best_bic],col="red",cex=1,pch=20)
+```
+
+
+
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4,fig.align="center"}
+predict.regsubsets=function(object,newdata,id,...){
+form=as.formula(object$call[[2]])
+mat=model.matrix(form,newdata)
+coefi=coef(object,id=id)
+xvars=names(coefi)
+mat[,xvars]%*%coefi
+}
+k=10
+set.seed(1)
+folds=sample(1:k,nrow(college.train),replace=TRUE)
+cv.errors=matrix(NA,k,n_predictors, dimnames=list(NULL, paste(1:n_predictors)))
+# Perform CV
+for(j in 1:k){
+  best_subset_method=regsubsets(Outstate~.,data=college.train[folds!=j,],nvmax=n_predictors, method = "forward")
+  for(i in 1:n_predictors){
+    pred=predict(best_subset_method, college.train[folds==j,],id=i)
+    cv.errors[j,i]=mean((college.train$Outstate[folds==j]-pred)^2)
+  }
+}
+# Compute mean cv errors for each model size
+mean.cv.errors=apply(cv.errors,2,mean)
+#mean.cv.errors
+# Plot the mean cv errors
+par(mfrow=c(1,1))
+plot(mean.cv.errors,type='b')
+min_cverror=which.min(mean.cv.errors)
+points(min_cverror,mean.cv.errors[min_cverror],col="red",cex=1,pch=20)
+```
+
+
+```{r, echo=TRUE, eval=TRUE}
+# Calculating the MSE for model with 6 predictors
+x.test = model.matrix(Outstate~.,data = college.test)
+coef6 = coef(fwd.fit, id=6)
+names(coef6)
+pred = x.test[,names(coef6)]%*%coef6
+MSE.forward = mean((college.test$Outstate - pred)^2)
+MSE.forward
+```
+
+The obvious choice might be the model with 14 predictors, as this had both the highest adjusted $R^2$ and the smallest $C_p$. However, since the improvement is very small for the larger models, we will choose the model with 6 variables, as this has the smallest BIC, and BIC is defined in a way that normally favors a smaller model. Cross validation also shows that 6 would be a good choice. It is not the one with the lowest mean error, but it is quite good compared to the rest. The model with 6 variables has a MSE of `r round(MSE.forward, 3)`.
+
+
+## e)
+
+Model selection using the Lasso method. Since the package `glmnet` does not use the model formula language we need to set up `x` and `y`.
+
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4,fig.align="center"}
+x.train = model.matrix(Outstate~., data = college.train)[,-1] # -1 is to remove intercept
+y.train = college.train$Outstate
+x.test = model.matrix(Outstate~., data = college.test)[,-1]
+y.test = college.test$Outstate
+lasso.fit = glmnet(x.train, y.train, alpha = 1) # alpha = 1 gives the Lasso method
+set.seed(1)
+lasso.fit.cv = cv.glmnet(x.train, y.train, alpha = 1)
+lasso.lambda = lasso.fit.cv$lambda.1se
+lasso.pred = predict(lasso.fit, s = lasso.lambda, newx = x.test)
+MSE.lasso = mean(as.numeric((lasso.pred - y.test)^2))
+lasso.coeffs = coef(lasso.fit, s=lasso.lambda)
+lasso.coeffs
+nonzero.names = rownames(coef(lasso.fit.cv, s = lasso.lambda))[coef(lasso.fit.cv, s = lasso.lambda)[,1]!= 0] 
+```
+
+Used the function `cv.glmnet` to perform 10 fold cross validation and choose a value for $\lambda$. Instead of choosing the model with the lowest MSE in the cross validation, which used all the predictors, we chose the value `lamdba.1se` which is the largest value of $\lambda$ which gives an error within 1 standard error of the minimum. The value was $\lambda = `r round(lasso.lambda, 3)`$. The reason for this is that it is a much smaller model, which only uses 8 predictors. The predictors were `r nonzero.names[-1]`. The MSE was `r MSE.lasso`.
+
+
+
+# Problem 2
+
+## a)
+
+(i) False
+(ii) False
+(iii) True
+(iv) True (fra video om smoothing splines)
+
+## b)
+
+The basis functions are
+
+\begin{subequations}
+\begin{align}
+  b_1(x) &= x^1\\
+  b_2(x) &= x^2\\
+  b_3(x) &= x^3\\
+  b_4(x) &= (x-q_1)^3_+\\
+  b_5(x) &= (x-q_2)^3_+\\
+  b_6(x) &= (x-q_3)^3_+
+\end{align}
+\end{subequations}
+
+
+## c)
+
+```{r, echo=TRUE, eval=TRUE}
+for.reg = regsubsets(Outstate~., data = college.train, method = "forward")
+coef.for = coef(for.reg, id = 6)
+co.names =  names(coef.for)[-1]
+co.names[1] = "Private" 
+```
+
+
+Will investigate the relationship between `Outstate` and the following 6 predictors: `r co.names`.
+
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=9,fig.align="center"}
+par(mfrow=c(3,2))
+plot(Outstate~Private, data=college.train)
+plot(Outstate~Room.Board, data = college.train, cex=0.5)
+plot(Outstate~Terminal, data = college.train, cex=0.5)
+plot(Outstate~perc.alumni, data = college.train, cex=0.5)
+plot(Outstate~Expend, data = college.train, cex=0.5)
+plot(Outstate~Grad.Rate, data = college.train, cex=0.5)
+```
+
+
+
+The relationship between `Outstate` and `Room.Board` seems to be approximately linear, same for `perc.alumni`. For `Terminal` on the other hand the slope seems to increase with increasing value for `Terminal`. The relation between `Outstate` and `Expend` does not seem linear, however the relation between `Outstate` and `Grad.Rate` does.
+
+## d)
+
+(i) Fit polynomial regression models for `Outstate` as a function of `Terminal` with polynomial degrees $d=1,\ldots,10$.
+
+
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4,fig.align="center"}
+par(mar=c(5.1, 4.1, 4.1, 6.5), xpd=TRUE)
+degs = 10
+MSE.poly.train = rep(NA, degs)
+MSE.poly.test = rep(NA, degs)
+plot(Outstate~Terminal, data = college.train, main="Polynomial regression", cex=0.5)
+d <- seq(min(college.train$Terminal), max(college.train$Terminal), length.out = 200)
+for(degree in 1:degs) {
+  fm <- lm(Outstate ~ poly(Terminal, degree), data = college.train)
+  assign(paste("college.train", degree, sep = "."), fm)
+  lines(d, predict(fm, data.frame(Terminal = d)), col = degree)
+  # Calculate training MSE
+  MSE.poly.train[degree] = mean((predict(fm, college.train) - college.train$Outstate)^2)
+  MSE.poly.test[degree] = mean((predict(fm, college.test) - college.test$Outstate)^2)
+}
+legend("topright", inset=c(-0.32,0.2), legend = paste("d =",1:degs), col = c(1:degs), lty = 1, bty="n")
+```
+
+
+
+
+(ii) Choose a suitable smoothing spline model to predict `Outstate` as a function of `Expend`. 
+
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=6,fig.align="center"}
+x = college.train$Expend
+y = college.train$Outstate
+smthspl.fit = smooth.spline(x, y, cv=T)
+plot(y~x, main=paste("Smoothing spline, df =", round(smthspl.fit$df,3)))
+lines(smthspl.fit)
+points(college.test$Expend, college.test$Outstate, pch=2, col=2)
+MSE.smthspl.train = mean((predict(smthspl.fit, x)$y - y)^2)
+MSE.smthspl.test = mean((predict(smthspl.fit, college.test$Expend)$y - college.test$Outstate)^2)
+MSE.smthspl.train
+MSE.smthspl.test
+```
+
+By putting `cv=T` cross validation is used to determine the degrees of freedom. They are determined to be `r smthspl.fit$df`, higher values of `df` gives a more overfitted line.
+
+
+(iii) Training MSE
+
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=3,fig.align="center"}
+par(mfrow=c(1,2))
+plot(1:degs, MSE.poly.train, type="l", xlab="Degree", ylab="MSE train")
+plot(1:degs, MSE.poly.test, type="l", xlab="Degree", ylab = "MSE test")
+```
+
+The training MSE for the smoothing spline is `r round(MSE.smthspl.train, 3)`.
+
+# Problem 3
+
+## a)
+
+(i) False
+(ii) True
+(iii) True
+(iv) False
+
+
+## b)
+
+
+Will use random forest as there are a few strong predictors which makes the trees correlated. A random forest can help decrease the variance by decorrelating the trees. This this is a regression tree $m=p/3$ will be used. A disadvantage of using a random forest is that t does not give one tree, which makes it difficult to visualize.
+
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4.3,fig.align="center"}
+set.seed(1)
+tree.fit.randomForest = randomForest(Outstate~., data=college.train, mtry = ncol(college.train)/3, ntree=500, importance=TRUE)
+yhat.randomForest = predict(tree.fit.randomForest, newdata = college.test)
+MSE.randomForest = mean((yhat.randomForest - college.test$Outstate)^2)
+importance(tree.fit.randomForest)
+varImpPlot(tree.fit.randomForest, type = 1)
+```
+
+
+
+## c)
+
+
+Compare MSEs of the different methods.
+
+```{r}
+MSE.forward
+MSE.lasso
+MSE.poly.test
+MSE.smthspl.test
+MSE.randomForest
+```
+
+# Problem 4
+
+```{r}
+id <- "1Fv6xwKLSZHldRAC1MrcK2mzdOYnbgv0E" # google file ID
+d.diabetes <- dget(sprintf("https://docs.google.com/uc?id=%s&export=download", id))
+d.train=d.diabetes$ctrain
+d.test=d.diabetes$ctest
+```
+
+## a)
+
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4.3,fig.align="center"}
+summary(d.train)
+plot(d.train)
+plot(diabetes~glu+bmi, data = d.train)
+plot(bmi~skin, data = d.train)
+plot(log(d.train$npreg))
+```
+
+
+
+
+
+(i) True
+(ii) True
+(iii) True
+(iv) True? Mye flere datapunkter langt nede, log(npreg) gir en jevnere fordeling
+
+## b)
+
+```{r,eval=TRUE,echo=TRUE}
+d.train$diabetes <- as.factor(d.train$diabetes)
+d.test$diabetes <- as.factor(d.test$diabetes)
+svmfit_linear = svm(diabetes~., data = d.train, kernel = "linear", cost = 1, scale=FALSE) 
+dim(d.train)
+summary(d.train)
+summary(svmfit_linear)
+```
+
+To run cross-validation over a grid of two tuning parameters, you can use the `tune()` function where `ranges` defines the grid points as follows: 
+
+
+```{r,eval=F,echo=T}
+CV_linear = tune(svm, diabetes~., data = d.train, kernel="linear",ranges=list(cost=c(0.001, 0.01, 0.1, 1, 5, 10, 50)))
+summary(CV_linear)
+best_model = CV_linear$best.model
+summary(best_model)
+#best_model = svm(diabetes~., data = d.train, kernel = "linear", cost = 0.1, scale=FALSE) 
+y_pred = predict(best_model, d.test)
+table(predict = y_pred, truth = d.test[,1])
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
