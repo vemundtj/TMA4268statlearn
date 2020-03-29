@@ -257,7 +257,7 @@ The relationship between `Outstate` and `Room.Board` seems to be approximately l
 (i) Fit polynomial regression models for `Outstate` as a function of `Terminal` with polynomial degrees $d=1,\ldots,10$.
 
 
-```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4,fig.align="center"}
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4.4,fig.align="center"}
 par(mar=c(5.1, 4.1, 4.1, 6.5), xpd=TRUE)
 degs = 10
 MSE.poly.train = rep(NA, degs)
@@ -276,21 +276,17 @@ legend("topright", inset=c(-0.32,0.1), legend = paste("d =",1:degs), col = c(1:d
 ```
 
 
-
-
 (ii) Choose a suitable smoothing spline model to predict `Outstate` as a function of `Expend`. 
 
 ```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=6,fig.align="center"}
 x = college.train$Expend
 y = college.train$Outstate
 smthspl.fit = smooth.spline(x, y, cv=T)
-plot(y~x, main=paste("Smoothing spline, df =", round(smthspl.fit$df,3)))
+plot(y~x, main=paste("Smoothing spline, df =", round(smthspl.fit$df,3)), xlab="Expend", ylab="Outstate")
 lines(smthspl.fit)
 #points(college.test$Expend, college.test$Outstate, pch=2, col=2)
 MSE.smthspl.train = mean((predict(smthspl.fit, x)$y - y)^2)
 MSE.smthspl.test = mean((predict(smthspl.fit, college.test$Expend)$y - college.test$Outstate)^2)
-MSE.smthspl.train
-MSE.smthspl.test
 ```
 
 By putting `cv=T` cross validation is used to determine the degrees of freedom. They are determined to be `r smthspl.fit$df`, higher values of `df` gives a more overfitted line.
@@ -302,9 +298,13 @@ By putting `cv=T` cross validation is used to determine the degrees of freedom. 
 par(mfrow=c(1,2))
 plot(1:degs, MSE.poly.train, type="l", xlab="Degree", ylab="MSE train")
 plot(1:degs, MSE.poly.test, type="l", xlab="Degree", ylab = "MSE test")
+best.train = which.min(MSE.poly.train)
 ```
 
-The training MSE for the smoothing spline is `r round(MSE.smthspl.train, 3)`.
+The smallest training error of the polynomials was `r MSE.poly.train[best.train]`, which corresponds to the polynomial of degree `r best.train`. As can be seen from the plot to the ledt the training error decreases with increasing degree of the polynomial. This is expected since an increase in the order of a polynomial makes it more flexible and allows it to fit the training data better. However, even though the training error decreases it does not mean the model is better, as can be seen in the right plot. This is known as overfitting. 
+
+
+The training MSE for the smoothing spline is `r round(MSE.smthspl.train, 3)`. It was expected that the smoothing spline would have a lower training MSE as it uses `Expend`, which is less spread than `Terminal` which is what the polynomials are fit on. 
 
 # Problem 3
 
@@ -319,9 +319,9 @@ The training MSE for the smoothing spline is `r round(MSE.smthspl.train, 3)`.
 ## b)
 
 
-Will use random forest as there are a few strong predictors which makes the trees correlated. A random forest can help decrease the variance by decorrelating the trees. This this is a regression tree $m=p/3$ will be used. A disadvantage of using a random forest is that t does not give one tree, which makes it difficult to visualize.
+Will use random forest as there are a few strong predictors which would make the trees correlated if normal bagging was used. A random forest can help decrease the variance by injecting more randomness. This is a regression tree so $m=p/3$ will be used. A disadvantage of using a random forest is that it does not give one tree, which makes it difficult to visualize and interperet compared to for example a pruned tree. 
 
-```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4.3,fig.align="center"}
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=5,fig.align="center"}
 set.seed(1)
 tree.fit.randomForest = randomForest(Outstate~., data=college.train, mtry = ncol(college.train)/3, ntree=500, importance=TRUE)
 yhat.randomForest = predict(tree.fit.randomForest, newdata = college.test)
@@ -338,12 +338,17 @@ varImpPlot(tree.fit.randomForest, type = 1)
 Compare MSEs of the different methods.
 
 ```{r}
-MSE.forward
-MSE.lasso
-MSE.poly.test
-MSE.smthspl.test
-MSE.randomForest
+sqrt(MSE.forward)
+sqrt(MSE.lasso)
+best.poly = which.min(MSE.poly.test)
+sqrt(MSE.poly.test[best.poly])
+sqrt(MSE.smthspl.test)
+sqrt(MSE.randomForest)
 ```
+
+
+The best method in terms of prediction error is the model from forward selection. If the goal was to develop an interpretable model the best may be a pruned tree, assuming it it not to bushy. 
+
 
 # Problem 4
 
@@ -352,18 +357,18 @@ id <- "1Fv6xwKLSZHldRAC1MrcK2mzdOYnbgv0E" # google file ID
 d.diabetes <- dget(sprintf("https://docs.google.com/uc?id=%s&export=download", id))
 d.train=d.diabetes$ctrain
 d.test=d.diabetes$ctest
+d.train$diabetes <- as.factor(d.train$diabetes)
+d.test$diabetes <- as.factor(d.test$diabetes)
 ```
 
 ## a)
 
-```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4.3,fig.align="center"}
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4,fig.align="center"}
 summary(d.train)
 ggpairs(d.train)
 par(mfrow=c(1,2))
 plot(diabetes~glu, data = d.train)
 plot(diabetes~bmi, data = d.train)
-par(mfrow=c(1,1))
-plot(bmi~skin, data = d.train)
 ```
 
 
@@ -375,18 +380,15 @@ plot(bmi~skin, data = d.train)
 ## b)
 
 ```{r,eval=TRUE,echo=TRUE}
-d.train$diabetes <- as.factor(d.train$diabetes)
-d.test$diabetes <- as.factor(d.test$diabetes)
-svmfit_linear = svm(diabetes~., data = d.train, kernel = "linear", cost = 1, scale=FALSE) 
+#svmfit_linear = svm(diabetes~., data = d.train, kernel = "linear", cost = 1, scale=FALSE) 
 dim(d.train)
-summary(d.train)
-summary(svmfit_linear)
+#summary(svmfit_linear)
 ```
 
-To run cross-validation over a grid of two tuning parameters, you can use the `tune()` function where `ranges` defines the grid points as follows: 
+Support vector calssifier with a linear boundary.
 
 
-```{r,eval=F,echo=T}
+```{r,eval=TRUE,echo=TRUE}
 CV_linear = tune(svm, diabetes~., data = d.train, kernel="linear",ranges=list(cost=c(0.001, 0.01, 0.1, 1, 5, 10, 50)))
 summary(CV_linear)
 best_model = CV_linear$best.model
@@ -396,9 +398,23 @@ y_pred = predict(best_model, d.test)
 table(predict = y_pred, truth = d.test[,1])
 ```
 
+Support vector classifier with radial boundary.
+
+```{r,eval=TRUE,echo=TRUE}
+CV_radial = tune(svm, diabetes~., data = d.train, kernel="radial",ranges=list(cost=c(0.001, 0.01, 0.1, 1, 5, 10, 50), gamma = c(0.01, 0.1,1,10,100)))
+summary(CV_radial)
+best_model = CV_radial$best.model
+summary(best_model)
+#best_model = svm(diabetes~., data = d.train, kernel = "linear", cost = 0.1, scale=FALSE) 
+y_pred = predict(best_model, d.test)
+table(predict = y_pred, truth = d.test[,1])
+```
 
 
 
+# Problem 5
+
+## a)
 
 
 
