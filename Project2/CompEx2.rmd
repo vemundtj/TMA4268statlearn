@@ -326,7 +326,7 @@ set.seed(1)
 tree.fit.randomForest = randomForest(Outstate~., data=college.train, mtry = ncol(college.train)/3, ntree=500, importance=TRUE)
 yhat.randomForest = predict(tree.fit.randomForest, newdata = college.test)
 MSE.randomForest = mean((yhat.randomForest - college.test$Outstate)^2)
-importance(tree.fit.randomForest)
+# importance(tree.fit.randomForest)
 varImpPlot(tree.fit.randomForest, type = 1)
 ```
 
@@ -347,7 +347,7 @@ sqrt(MSE.randomForest)
 ```
 
 
-The best method in terms of prediction error is the model from forward selection. If the goal was to develop an interpretable model the best may be a pruned tree, assuming it it not to bushy. 
+The best method in terms of prediction error is the model from forward selection. If the goal was to develop an interpretable model the best may be a pruned tree, assuming if it is not to bushy. 
 
 
 # Problem 4
