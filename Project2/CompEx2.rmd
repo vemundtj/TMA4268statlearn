@@ -54,7 +54,7 @@ with $\lambda>0$ being a tuning parameter. The residual sum of squares is define
   RSS = \sum_{i=1}^n \left(y_i - \hat\beta_0 - \sum_{j=1}^p \hat\beta_j x_{ij} \right)^2
 \end{equation}
 
-Equation \ref{eq:ridge_regression} can be rewritten in terms of matrices and vectors as
+Will assume that $X$ has been centered such that the mean is zero, i.e $\beta_0\approx0$. It is also smart to standardize the predictors before using ridge regression, as ridge regression is not scale invariant. Equation \ref{eq:ridge_regression} can be rewritten in terms of matrices and vectors as
 
 
 \begin{equation}
@@ -72,7 +72,7 @@ Differentiating this with respect to $\hat \beta_{Ridge}$ and setting equal to 0
 \end{align}
 \end{subequations}
 
-Where $I$ is the identity matrix. This is done assuming that $X$ has been centered such that the mean is zero, i.e $\beta_0\approx0$. It is also smart to standardize the predictors before using ridge regression, as ridge regression is not scale invariant. 
+Where $I$ is the identity matrix.
 
 ## b)
 
@@ -153,7 +153,6 @@ for(j in 1:k){
 }
 # Compute mean cv errors for each model size
 mean.cv.errors=apply(cv.errors,2,mean)
-#mean.cv.errors
 # Plot the mean cv errors
 par(mfrow=c(1,1))
 plot(mean.cv.errors,type='b')
@@ -166,16 +165,27 @@ points(min_cverror,mean.cv.errors[min_cverror],col="red",cex=1,pch=20)
 # Calculating the MSE for model with 6 predictors
 x.test = model.matrix(Outstate~.,data = college.test)
 coef6 = coef(fwd.fit, id=6)
-co.names =  names(coef6)[-1]
-co.names[1] = "Private" 
 pred = x.test[,names(coef6)]%*%coef6
 MSE.forward = mean((college.test$Outstate - pred)^2)
+co.names =  names(coef6)[-1] # Extract the names of the predictors used, minus the intercept
+co.names[1] = "Private" # change name from PrivateYes to Private
 ```
 
 
 
-The obvious choice might be the model with 14 predictors, as this had both the highest adjusted $R^2$ and the smallest $C_p$. However, since the improvement is very small for the larger models it may be unnecesary to have such a large model. See that the model with 6 predictors has the smallest BIC. BIC is defined in a way that normally favors a smaller model. Cross validation also shows that 6 would be a good choice. It is not the one with the lowest mean error, but it is quite good compared to the rest and better than both 5 and 7. The model with 6 predictors has a MSE of `r MSE.forward`. The 6 predictors are `r co.names`.
+The obvious choice might be the model with 14 predictors, as this had both the highest adjusted $R^2$ and the smallest $C_p$. However, since the improvement is very small for the larger models it may be unnecesary to have such a large model. See that the model with 6 predictors has the smallest BIC. BIC is defined in a way that normally favors a smaller model. Cross validation also shows that 6 would be a good choice. It is not the one with the lowest mean error, but it is quite good compared to the rest and better than both 5 and 7. The 6 predictors are `r co.names`, which gives a model on the form
 
+\begin{equation}
+  Y = \beta_0 + \beta_1 X_{\text{Private}} + \beta_2 X_{\text{Room.Board}}+ \beta_3 X_{\text{Terminal}} + \beta_4 X_{\text{perc.alumni}} + \beta_5 X_{\text{Expend}} + \beta_6 X_{\text{Grad.Rate}} + \epsilon
+\end{equation}
+
+vet ikke hvilken av disse som bør brukes
+
+\begin{equation}
+  \hat y = \hat \beta_0 + \hat \beta_1 x_{\text{Private}} + \hat \beta_2 x_{\text{Room.Board}}+ \hat\beta_3 x_{\text{Terminal}} + \hat \beta_4 x_{\text{perc.alumni}} + \hat \beta_5 x_{\text{Expend}} + \hat\beta_6 x_{\text{Grad.Rate}}
+\end{equation}
+
+The model with 6 predictors has a MSE of `r MSE.forward`. 
 
 ## e)
 
@@ -208,7 +218,7 @@ Used the function `cv.glmnet` to perform 10 fold cross validation and choose a v
 (i) False
 (ii) False
 (iii) True
-(iv) True (fra video om smoothing splines)
+(iv) True
 
 ## b)
 
@@ -250,14 +260,14 @@ plot(Outstate~Grad.Rate, data = college.train, cex=0.5)
 
 
 
-The relationship between `Outstate` and `Room.Board` seems to be approximately linear, same for `perc.alumni`. For `Terminal` on the other hand the slope seems to increase with increasing value for `Terminal`, it could maybe benefit from a non-linear transformation. The relation between `Outstate` and `Expend` does not seem linear, however the relation between `Outstate` and `Grad.Rate` does.
+The relationship between `Outstate` and `Room.Board` seems to be approximately linear, same for `perc.alumni` although it is very spread out. For `Terminal` on the other hand the slope seems to increase with increasing value for `Terminal`, it could maybe benefit from a non-linear transformation. The relation between `Outstate` and `Expend` does not seem linear and would most likely benefit from a non-linear transformation, `Grad.Rate` on the other hand would probably not benefit much.
 
 ## d)
 
 (i) Fit polynomial regression models for `Outstate` as a function of `Terminal` with polynomial degrees $d=1,\ldots,10$.
 
 
-```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4.4,fig.align="center"}
+```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=4,fig.align="center"}
 par(mar=c(5.1, 4.1, 4.1, 6.5), xpd=TRUE)
 degs = 10
 MSE.poly.train = rep(NA, degs)
@@ -301,10 +311,10 @@ plot(1:degs, MSE.poly.test, type="l", xlab="Degree", ylab = "MSE test")
 best.train = which.min(MSE.poly.train)
 ```
 
-The smallest training error of the polynomials was `r MSE.poly.train[best.train]`, which corresponds to the polynomial of degree `r best.train`. As can be seen from the plot to the ledt the training error decreases with increasing degree of the polynomial. This is expected since an increase in the order of a polynomial makes it more flexible and allows it to fit the training data better. However, even though the training error decreases it does not mean the model is better, as can be seen in the right plot. This is known as overfitting. 
+The smallest training error of the polynomials was `r MSE.poly.train[best.train]`, which corresponds to the polynomial of degree `r best.train`. As can be seen from the plot to the left the training error decreases with increasing degree of the polynomial. This is expected since an increase in the order of a polynomial makes it more flexible and allows it to fit the training data better. However, even though the training error decreases it does not mean the model is better, as can be seen in the right plot the test error increases for 7 and 9. This is known as overfitting. 
 
 
-The training MSE for the smoothing spline is `r round(MSE.smthspl.train, 3)`. It was expected that the smoothing spline would have a lower training MSE as it uses `Expend`, which is less spread than `Terminal` which is what the polynomials are fit on. 
+The training MSE for the smoothing spline is `r round(MSE.smthspl.train, 3)`. It was expected that the smoothing spline would have a lower training MSE as it uses the predictor `Expend`, which is less spread than `Terminal` which is what the polynomials are fit on. 
 
 # Problem 3
 
@@ -319,7 +329,8 @@ The training MSE for the smoothing spline is `r round(MSE.smthspl.train, 3)`. It
 ## b)
 
 
-Will use random forest as there are a few strong predictors which would make the trees correlated if normal bagging was used. A random forest can help decrease the variance by injecting more randomness. This is a regression tree so $m=p/3$ will be used. A disadvantage of using a random forest is that it does not give one tree, which makes it difficult to visualize and interperet compared to for example a pruned tree. 
+Will use random forest as there are a few strong predictors which would make the trees correlated if normal bagging was used. A random forest can help decrease the variance by injecting more randomness. This is a regression tree so $m=p/3$ will be used. A disadvantage of using a random forest is that it does not give one tree, which makes it difficult to visualize and interperet compared to for example a pruned tree.
+
 
 ```{r, echo=TRUE, eval=TRUE, fig.width=6,fig.height=5,fig.align="center"}
 set.seed(1)
@@ -335,7 +346,7 @@ varImpPlot(tree.fit.randomForest, type = 1)
 ## c)
 
 
-Compare MSEs of the different methods.
+Compare square root of the MSEs of the different methods. We hae taken the square root of the test errors since it makes it much easier to compare since the numers are smaller, and the order is not changed.
 
 ```{r}
 sqrt(MSE.forward)
@@ -347,8 +358,7 @@ sqrt(MSE.randomForest)
 ```
 
 
-The best method in terms of prediction error is the model from forward selection. If the goal was to develop an interpretable model the best may be a pruned tree, assuming if it is not to bushy. 
-
+The best method in terms of test error is the random forest model. If the goal was to develop an interpretable model the best may be a pruned tree, assuming it is not too bushy as it easy to visualize when it is just a single tree. From the models we have fit the most interpretable might be the forward selected model, as this is a linear model which also gives quite good performance.
 
 # Problem 4
 
@@ -379,72 +389,233 @@ plot(diabetes~bmi, data = d.train)
 
 ## b)
 
-```{r,eval=TRUE,echo=TRUE}
+```{r,eval=TRUE,echo=FALSE}
 #svmfit_linear = svm(diabetes~., data = d.train, kernel = "linear", cost = 1, scale=FALSE) 
-dim(d.train)
+#dim(d.train)
 #summary(svmfit_linear)
 ```
 
-Support vector calssifier with a linear boundary.
+Support vector classifier with a linear boundary.
 
 
 ```{r,eval=TRUE,echo=TRUE}
+set.seed(10)
 CV_linear = tune(svm, diabetes~., data = d.train, kernel="linear",ranges=list(cost=c(0.001, 0.01, 0.1, 1, 5, 10, 50)))
-summary(CV_linear)
-best_model = CV_linear$best.model
-summary(best_model)
-#best_model = svm(diabetes~., data = d.train, kernel = "linear", cost = 0.1, scale=FALSE) 
-y_pred = predict(best_model, d.test)
-table(predict = y_pred, truth = d.test[,1])
+#summary(CV_linear)
+best_model_lin = CV_linear$best.model
+#summary(best_model_lin)
+y_pred_lin = predict(best_model_lin, d.test)
+confMat_lin = table(predict = y_pred_lin, truth = d.test$diabetes)
+confMat_lin
+misrate_lin = 1 - sum(diag(confMat_lin)) / sum(confMat_lin)
+misrate_lin
 ```
 
-Support vector classifier with radial boundary.
+
+Support vector machine with radial boundary.
 
 ```{r,eval=TRUE,echo=TRUE}
+set.seed(10)
 CV_radial = tune(svm, diabetes~., data = d.train, kernel="radial",ranges=list(cost=c(0.001, 0.01, 0.1, 1, 5, 10, 50), gamma = c(0.01, 0.1,1,10,100)))
-summary(CV_radial)
-best_model = CV_radial$best.model
-summary(best_model)
-#best_model = svm(diabetes~., data = d.train, kernel = "linear", cost = 0.1, scale=FALSE) 
-y_pred = predict(best_model, d.test)
-table(predict = y_pred, truth = d.test[,1])
+#summary(CV_radial)
+best_model_rad = CV_radial$best.model
+#summary(best_model_rad)
+y_pred_rad = predict(best_model_rad, d.test)
+confMat_rad = table(predict = y_pred_rad, truth = d.test$diabetes)
+confMat_rad
+misrate_rad = 1 - sum(diag(confMat_rad)) / sum(confMat_rad)
+misrate_rad
+```
+
+MANGLER DISKUSJON HER
+
+## c)
+
+MANGLER DISKUSJON HER. 
+
+```{r,eval=F,echo=T}
+mylogit <-glm(diabetes~.,data=d.train, family = "binomial" )
+mylogit.pred <- predict(mylogit, d.test[,-1], type = "response") 
+#Confusion matrix 
+confusionMatrix(d.test$diabetes, mylogit.pred)
+
+#Misclassification error
+misClassError(d.test$diabetes, mylogit.pred) 
 ```
 
 
+## d)
+
+(i)    FALSE
+(ii)   FALSE
+(iii)  TRUE
+(iv)   TRUE
+
+
+
+## e)
+
+```{r,eval=T,echo=T}
+#https://towardsdatascience.com/optimization-loss-function-under-the-hood-part-iii-5dff33fa015d
+```
+
+Lets assume $f({\boldsymbol x}_i)$ correponds to the linear predictor in the logistic regression approach, that is, from module 4: 
+
+\begin{equation}
+f({\boldsymbol x}_i) = \frac{e^{\beta_0 + \beta_1x_{i1}+ ... + \beta_px_{ip}}}{1+e^{\beta_0 + \beta_1x_{i1}+ ... + \beta_px_{ip}}}
+\end{equation}
+
+
+This means that the logistic regression model will take the form 
+
+\begin{equation}
+p_i = \frac{e^{f({\boldsymbol x}_i)}}{1+e^{f({\boldsymbol x}_i)}}
+\end{equation}
+
+Since all observations  in logisitic regression contribute weighted by $p_i(1-p_i)$, we rearrange the regression model from model 4 to get this form, and we get $$log\bigg{(}\frac{p_i}{1-p_i}\bigg{)} = f({\boldsymbol x}_i) $$
+
+That is, the loss function 
+
+\begin{equation}
+\log(1+\exp(-y_i f({\boldsymbol x}_i)))
+\end{equation}
+
+is the deviance for the $y=-1,1$ encoding in a logistic regression model.
 
 # Problem 5
 
+
+```{r, eval = TRUE, echo=TRUE}
+id <- "1VfVCQvWt121UN39NXZ4aR9Dmsbj-p9OU" # google file ID
+GeneDatas <- read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id),header=F)
+colnames(GeneDatas)[1:20] = paste(rep("H", 20), c(1:20), sep = "")
+colnames(GeneDatas)[21:40] = paste(rep("D", 20), c(1:20), sep = "")
+#print(colnames)
+row.names(GeneDatas) = paste(rep("G", 1000), c(1:1000), sep = "")
+GeneData=t(GeneDatas)
+```
+
 ## a)
 
+```{r fig.align="center", fig.height = 9,  fig.width = 9, eval=TRUE, echo=TRUE}
+par(mfrow=c(2,3))
+plot(hclust(dist(scale(GeneData)),method="complete"),
+     main="Complete linkage, Euclidian distance", xlab="", sub="")
+plot(hclust(dist(scale(GeneData)),method="average"),
+     main="Average linkage, Euclidian distance", xlab="", sub="")
+plot(hclust(dist(scale(GeneData)),method="single"),
+     main="Single linkage, Euclidian distance", xlab="", sub="")
+plot(hclust(as.dist(1-cor(t(scale(GeneData)))),method="complete"),main="Complete linkage,
+     Correlation-based distance", xlab="", sub="")
+plot(hclust(as.dist(1-cor(t(scale(GeneData)))),method="average"),main="Average linkage,
+     Correlation-based distance", xlab="", sub="")
+plot(hclust(as.dist(1-cor(t(scale(GeneData)))),method="single"),main="Single linkage,
+     Correlation-based distance", xlab="", sub="")
+```
+
+
+## b)
+
+```{r fig.align="center", eval=F,echo=F}
+hc.cut1=cutree(hclust(dist(scale(GeneData)),method="complete"), 2)
+hc.cut2=cutree(hclust(dist(scale(GeneData)),method="single"), 2)
+hc.cut3=cutree(hclust(dist(scale(GeneData)),method="average"), 2)
+hc.cut4=cutree(hclust(as.dist(1-cor(t(scale(GeneData)))),method="complete"), 2)
+hc.cut5=cutree(hclust(as.dist(1-cor(t(scale(GeneData)))),method="average"), 2)
+hc.cut6=cutree(hclust(as.dist(1-cor(t(scale(GeneData)))),method="single"), 2)
+table(hc.cut1); table(hc.cut2); table(hc.cut3)
+table(hc.cut4); table(hc.cut5); table(hc.cut6)
+hc.cut1; hc.cut2; hc.cut3; hc.cut4; hc.cut5; hc.cut6
+```
+
+As per now, all methods will classify all tissues correctly, as we know that the first ten variables should be value 1, and the last ten should be value 2. Therefore, all metods could be used in this example. However, complete and average methods tend to perform better than single linkage methods. 
+
+
+## c)
+
+With Principal Component Analysis, the first principal component loading vector solves the following optimization problem,
+
+\begin{equation*}
+  \max_{\phi_{11},\ldots,\phi_{p1}} \Big\{ \frac{1}{n}\sum_{i=1}^n \Big( \sum_{j=1}^p \phi_{j1}x_{ij} \Big)^2  \Big\} \quad \text{subject to } \sum_{j=1}^p\phi_{j1}^2 = 1.
+\end{equation*}
 
 
 
 
 
 
+That is, the PCA analysis finds a low dimension that captures most of the variability of the data. In the above equation, $\phi_{11}, \ldots, \phi_{p1}$ are the loadings of the first principal component, making up the principal component loading vector, $\phi_{11} = (\phi_{11} \ldots \phi_{p1})^T$, consisting of $p$ elements. Because the system is normalized, the squared sums of the loading vector components must become one, that is 
+
+$$ \sum_{j=1}^{p} \phi_{j1}^{2}=1 $$ 
+As the loading vector defines a direction in feature space along which the data vary the most, we can project $n$ number of data points $x_1, \ldots , x_n$ onto this direction, where the projected values will be the principal component scores $z_{11}, \ldots , z_{n1}$ themselves.
 
 
+The first principal component consists of a set of features $X_1$, $X_2$, ..., $X_p$ is the normalized linear combination of the features:
+
+\begin{equation}
+Z_1 = \phi_{11}X_1 + \phi_{21}X_2 + \cdots + \phi_{p1}X_p
+\end{equation}
 
 
+Thus, the second principal component is the linear combination
+of $X_1,\ldots, X_p$ that has maximal variance among all linear combinations that are uncorrelated with $Z_1$. The second PC scores $z12, z22, \ldots, zn2$ take the form $z_{i2} = \phi_{12} x_{i1} + \phi_{22} x_{i2} + \cdots + \phi_{p2} x_{ip}$, where $\phi_2$ is the second principal component loading vector. The third principal component is chosen by taking finding the linear combination with maximal variance among all linear combinatinans uncorrelated to $Z_2$ and thus also $Z_2$, and so on for the next PCs. It turns out that constraining $Z_2$ to be uncorrelated with $Z_1$ is equivalent to constraining the direction $\phi_2$ to be orthogonal (perpendicular) to the direction $\phi_1$ and so on. The principal component directions $\phi_{1}, \phi_{2} \phi_{3}, ...$ are therefore the ordered sequence of right singular vectors of the matrix $X$, and the variances of the components are $\frac{1}{n}$ times the squares of the singular values. There are at most $\min (n-1, p)$ principal components.
 
 
+## d)
 
+### i)
 
+```{r fig.align="center", eval=TRUE, echo=TRUE}
+pca.out=prcomp(GeneData,scale=TRUE)
+names(pca.out)
+par(mfrow=c(1,2))
+plot(pca.out$x[,1:2], xlab = "PCA component 1",ylab="PCA component 2", pch=rownames(GeneData))
+     #pch = c(GeneData[1:20], GeneData[21:40]))
+summary(pca.out)
+plot(pca.out)
+#Didnt use color, but H for healthy and D for diseased.
+```
 
+### ii)
 
+```{r fig.align="center", eval=TRUE, echo=TRUE}
+pca.var = pca.out$sdev^2
+pve=pca.var/sum(pca.var) #To get the variance
+pve
+pve.perc= pve*100
+```
 
+By summing the variation reduction of the first five components we get that the first five PC´s reduce the variance by cumsum(pve.perc)[5] \%.
 
+####################################################################################
 
+## e)
 
+Use your results from PCA to find which genes that vary the most accross the two groups.
 
+```{r fig.align="center", eval=TRUE, echo=TRUE}
+pca.loading = pca.out$rotation[, 1:2]
+informative_loadings = rbind(head(pca.loading[order(pca.loading[, 1], decreasing = TRUE),
+]), head(pca.loading[order(pca.loading[, 2], decreasing = TRUE), ]))
+informative_loadings
+biplot(x = pca.out$x[, 1:2], y = informative_loadings, scale = 0)
+```
 
+Wee see that the 10 genes that vary the most across the two groups in decreasing direction are G502, G589, G565, G590, G600, G551, G989, G95 and G7.
 
+## f)
 
+Use K-means to seperate the tissue samples into two groups. Plot the values in a two-dimensional space with PCA. What is the error rate of K-means?
 
+```{r fig.align="center", fig.height = 9,  fig.width = 9, eval=TRUE, echo=TRUE}
+km.out=kmeans(GeneData,2,nstart=20) #Separate GeneData into 2 groups. Could also do nstart=1
+# PCA with true labels, combined with cluster
+plot(pca.out$x[,1:2], col=(km.out$cluster), pca.out=c(GeneData[1:20],GeneData[21:40]), pch=rownames(GeneData))
+#Error rate, in this case zero.
+(km.out$cluster)
+```
 
-
-
-
+The error rate of k-means in this case is zero. 
 
 
 
